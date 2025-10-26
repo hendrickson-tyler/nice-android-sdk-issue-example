@@ -5,10 +5,11 @@ import android.util.Log
 import com.nice.cxonechat.ChatInstanceProvider
 import com.nice.cxonechat.SocketFactoryConfiguration
 import com.nice.cxonechat.enums.CXoneEnvironment
-import com.nice.cxonechat.state.Environment
 
 class CxoneSampleApplication : Application() {
-    private val TAG = "CxoneApplication"
+    companion object {
+        private const val TAG = "CxoneApplication"
+    }
 
     override fun onCreate() {
         super.onCreate()
