@@ -38,13 +38,13 @@ The core configuration for the NICE CXone Chat SDK is defined in the `CxoneSampl
 
 ### SDK Parameters
 
-The initialization currently uses the following mock/test parameters:
+The initialization currently uses the following placeholder parameters:
 
-| Parameter | Value | Description |
-|------------|--------|-------------|
-| **Environment/Region** | `CXoneEnvironment.EU1` | The target NICE CXone data center region |
-| **Brand ID** | `1086L` | Your organization's unique Brand Identifier |
-| **Channel ID** | `chat_15bf234b-d6a8-4ce0-8b90-e8cf3c6f3748` | The specific channel/queue ID for the chat service |
+| Parameter | Placeholder | Description |
+|------------|--------------|-------------|
+| **Environment/Region** | `CXoneEnvironment.<YOUR_REGION>` | The target NICE CXone data center region |
+| **Brand ID** | `<YOUR_BRAND_ID>` | Your organization's unique Brand Identifier |
+| **Channel ID** | `<YOUR_CHANNEL_ID>` | The specific channel/queue ID for the chat service |
 
 > ⚠️ Replace these placeholder values with your **actual CXone credentials** to connect to your production or testing environment.
 
@@ -62,9 +62,9 @@ override fun onCreate() {
 
     // 1. Create the Configuration
     val config = SocketFactoryConfiguration(
-        CXoneEnvironment.EU1.value, // Example Region
-        1086L, // Example Brand ID
-        "chat_15bf234b-d6a8-4ce0-8b90-e8cf3c6f3748" // Example Channel ID
+        CXoneEnvironment.<YOUR_REGION>.value, // Replace with actual region
+        <YOUR_BRAND_ID>, // Replace with your Brand ID
+        "<YOUR_CHANNEL_ID>" // Replace with your Channel ID
     )
 
     // 2. Create the singleton instance
