@@ -5,6 +5,7 @@ import android.util.Log
 import com.nice.cxonechat.ChatInstanceProvider
 import com.nice.cxonechat.SocketFactoryConfiguration
 import com.nice.cxonechat.enums.CXoneEnvironment
+import com.nice.cxonechat.log.LoggerAndroid
 
 class CxoneSampleApplication : Application() {
     companion object {
@@ -18,15 +19,15 @@ class CxoneSampleApplication : Application() {
         // 1. Create the correct Configuration object using your parameters
         // Region: EU1, BrandId: 1086L, ChannelId: chat_15bf234b-d6a8-4ce0-8b90-e8cf3c6f3748
         val config = SocketFactoryConfiguration(
-            CXoneEnvironment.EU1.value,
-            1086L, // Brand ID must be a Long
-            "chat_15bf234b-d6a8-4ce0-8b90-e8cf3c6f3748"
+            CXoneEnvironment.NA1.value,
+            1390, // Brand ID must be a Long
+            "chat_47721fec-6af2-4b01-b8fe-fea0c720a4fb"
         )
 
         // 2. Create the singleton ChatInstanceProvider
         try {
             // Note: This method automatically creates the singleton instance and logs the state.
-            ChatInstanceProvider.create(config)
+            ChatInstanceProvider.create(config, developmentMode = true, logger = LoggerAndroid("CXoneChat"))
             Log.i(TAG, "ChatInstanceProvider created successfully.")
 
             // 3. Immediately prepare the connection
