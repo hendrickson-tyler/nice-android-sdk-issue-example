@@ -56,11 +56,19 @@ class ChatConversationViewModel : ViewModel() {
 
         Log.v(TAG, "Attaching persistent threads() listener...")
 
-        // PROBLEM: This threads callback is not fired again? Even though a new thread is created.
         cancellableThreadsCallback = handler.threads { threadsList ->
             Log.d(TAG, "→ threads() callback fired with count=${threadsList.size}")
 
             if (threadsList.isNotEmpty()) {
+                val existingThread = threadsList.first()
+                if (!hasThreadAttached) {
+                    Log.i(TAG, "Existing or newly created thread found (id=${existingThread.id}) → attaching.")
+                    chatThreadHandler = handler.thread(existingThread)
+                    chatThreadHandler?.let { attachThreadFlow(it) }
+                } else {
+                    Log.v(TAG, "Thread already attached → ignoring further updates.")
+                }
+
                 // ✅ Thread exists → safe to clear creation flag
                 isCreatingThread = false
                 return@threads
@@ -76,15 +84,17 @@ class ChatConversationViewModel : ViewModel() {
             Log.i(TAG, "No existing threads → creating one via handler.create()")
 
                 try {
-                    chatThreadHandler = handler.create()
+                    val newHandler = handler.create()
+                    chatThreadHandler = newHandler
                     Log.v(TAG, "create() returned handler=${chatThreadHandler.hashCode()}")
 
-                    // QUESTION: Why is this the only way to get a thread?
-//                    val thread = chatThreadHandler!!.get()
-//                    Log.i(TAG, "New thread created with id=${thread.id}.")
-//                    _thread.value = thread
+                    // Since locally created threads don't trigger the listener, we manually set
+                    // a value here.
+                    val thread = chatThreadHandler!!.get()
+                    Log.i(TAG, "New thread created with id=${thread.id}.")
+                    _thread.value = thread
 
-                    // QUESTION: Why doesn't this work here?
+                    // For future updates, we attach to the thread flow.
                     attachThreadFlow(chatThreadHandler!!)
                 } catch (e: Exception) {
                     Log.e(TAG, "Error during create()", e)

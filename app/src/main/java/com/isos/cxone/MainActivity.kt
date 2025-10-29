@@ -314,9 +314,9 @@ fun ChatSessionScreen(viewModel: ChatConversationViewModel) {
     }
 
     // Send an example message when the thread is available
-    if (chatThread != null) {
-        viewModel.sendExampleMessage()
-    }
+//    if (chatThread != null) {
+//        viewModel.sendExampleMessage()
+//    }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
