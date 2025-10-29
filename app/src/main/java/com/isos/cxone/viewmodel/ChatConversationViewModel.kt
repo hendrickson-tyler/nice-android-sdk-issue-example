@@ -8,12 +8,12 @@ import com.nice.cxonechat.thread.ChatThread
 import com.nice.cxonechat.ChatThreadHandler
 import com.nice.cxonechat.ChatThreadsHandler
 import com.nice.cxonechat.Cancellable
+import com.nice.cxonechat.message.OutboundMessage
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class ChatConversationViewModel : ViewModel() {
-
     companion object {
         private const val TAG = "ChatViewModel"
     }
@@ -21,46 +21,46 @@ class ChatConversationViewModel : ViewModel() {
     private val chat = ChatInstanceProvider.get().chat.also {
         Log.d(TAG, "Chat instance obtained: $it")
     }
-
-    private val handlerThreads: ChatThreadsHandler? = chat?.threads()?.also {
+    private val chatThreadsHandler: ChatThreadsHandler? = chat?.threads()?.also {
         Log.d(TAG, "ChatThreadsHandler initialized.")
     }
+    private var chatThreadHandler: ChatThreadHandler? = null
 
-    private var handlerThread: ChatThreadHandler? = null
-    private var cancellableThreads: Cancellable? = null
-    private var cancellableThread: Cancellable? = null
+    private var cancellableThreadsCallback: Cancellable? = null
+    private var cancellableThreadCallback: Cancellable? = null
+
     private var isCreatingThread = false
     private var hasThreadAttached = false
 
     private val _thread = MutableStateFlow<ChatThread?>(null)
-    val thread: StateFlow<ChatThread?> = _thread
+    val thread = _thread.asStateFlow()
 
     init {
         Log.d(TAG, "ViewModel initialized → setting up thread listener.")
-        viewModelScope.launch { observeThreads() }
+        observeThreads()
     }
 
-    private suspend fun observeThreads() {
-        val handler = handlerThreads ?: run {
+    fun sendExampleMessage() {
+        val messageHandler = chatThreadHandler?.messages() ?: run {
+            Log.e(TAG, "Cannot send message → ChatThreadHandler or MessagesHandler is null.")
+            return
+        }
+        messageHandler.send(OutboundMessage("Creating new thread!"))
+    }
+
+    private fun observeThreads() {
+        val handler = chatThreadsHandler ?: run {
             Log.e(TAG, "ChatThreadsHandler is null → Chat not ready.")
             return
         }
 
         Log.v(TAG, "Attaching persistent threads() listener...")
 
-        cancellableThreads = handler.threads { threadsList ->
+        // PROBLEM: This threads callback is not fired again? Even though a new thread is created.
+        cancellableThreadsCallback = handler.threads { threadsList ->
             Log.d(TAG, "→ threads() callback fired with count=${threadsList.size}")
 
             if (threadsList.isNotEmpty()) {
-                val existingThread = threadsList.first()
-                if (!hasThreadAttached) {
-                    Log.i(TAG, "Existing or newly created thread found (id=${existingThread.id}) → attaching.")
-                    handlerThread = handler.thread(existingThread)
-                    handlerThread?.let { attachThreadFlow(it) }
-                } else {
-                    Log.v(TAG, "Thread already attached → ignoring further updates.")
-                }
-
                 // ✅ Thread exists → safe to clear creation flag
                 isCreatingThread = false
                 return@threads
@@ -75,33 +75,22 @@ class ChatConversationViewModel : ViewModel() {
             isCreatingThread = true
             Log.i(TAG, "No existing threads → creating one via handler.create()")
 
-            viewModelScope.launch {
                 try {
-                    val createdHandler = handler.create()
-                    Log.v(TAG, "create() returned handler=${createdHandler.hashCode()}")
-                    // Wait up to 10s for SDK to return thread via threads() callback
-                    repeat(10) { attempt ->
-                        kotlinx.coroutines.delay(1000L)
-                        Log.v(TAG, "Polling attempt ${attempt + 1}: refreshing threads()")
-                        try {
-                            handler.refresh()
-                        } catch (e: Exception) {
-                            Log.w(TAG, "refresh() failed on attempt ${attempt + 1}", e)
-                        }
-                    }
+                    chatThreadHandler = handler.create()
+                    Log.v(TAG, "create() returned handler=${chatThreadHandler.hashCode()}")
+
+                    // QUESTION: Why is this the only way to get a thread?
+//                    val thread = chatThreadHandler!!.get()
+//                    Log.i(TAG, "New thread created with id=${thread.id}.")
+//                    _thread.value = thread
+
+                    // QUESTION: Why doesn't this work here?
+                    attachThreadFlow(chatThreadHandler!!)
                 } catch (e: Exception) {
                     Log.e(TAG, "Error during create()", e)
                     isCreatingThread = false // Reset only on error
                 }
             }
-        }
-
-        Log.v(TAG, "Triggering initial threads refresh()")
-        try {
-            handler.refresh()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error calling refresh()", e)
-        }
     }
 
 
@@ -114,13 +103,7 @@ class ChatConversationViewModel : ViewModel() {
         hasThreadAttached = true
         Log.d(TAG, "Subscribing to thread handler (hash=${handler.hashCode()}) via get()")
 
-        try {
-            handler.refresh()
-        } catch (e: Exception) {
-            Log.w(TAG, "handler.refresh() threw an exception (ignored).", e)
-        }
-
-        cancellableThread = handler.get { thread ->
+        cancellableThreadCallback = handler.get { thread ->
             Log.d(TAG, "→ threadFlow() callback → threadId=${thread.id}")
             _thread.value = thread
         }
@@ -129,8 +112,8 @@ class ChatConversationViewModel : ViewModel() {
     override fun onCleared() {
         Log.w(TAG, "ViewModel cleared → cancelling listeners.")
         try {
-            cancellableThreads?.cancel()
-            cancellableThread?.cancel()
+            cancellableThreadsCallback?.cancel()
+            cancellableThreadCallback?.cancel()
         } catch (e: Exception) {
             Log.e(TAG, "Error cancelling listeners", e)
         }

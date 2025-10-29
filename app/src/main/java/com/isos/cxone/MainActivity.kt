@@ -313,6 +313,11 @@ fun ChatSessionScreen(viewModel: ChatConversationViewModel) {
         "Waiting for Chat Thread..."
     }
 
+    // Send an example message when the thread is available
+    if (chatThread != null) {
+        viewModel.sendExampleMessage()
+    }
+
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = "Chat Session Active!",
